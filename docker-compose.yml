@@ -1,0 +1,73 @@
+# VidalCasino — Stack completo para prueba local
+# Uso: docker compose up -d
+# Casino disponible en: http://localhost:8080
+
+services:
+
+  # ── Base de datos ──────────────────────────────────────────
+  database:
+    build: ./db
+    container_name: casino-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER:     ${DB_USER:-casino}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-casino_dev}
+      POSTGRES_DB:       ${DB_NAME:-casino_db}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - casino-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-casino}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Backend Node.js ────────────────────────────────────────
+  backend:
+    build: .
+    container_name: casino-backend
+    restart: unless-stopped
+    environment:
+      DB_HOST:      database
+      DB_PORT:      5432
+      DB_USER:      ${DB_USER:-casino}
+      DB_PASSWORD:  ${DB_PASSWORD:-casino_dev}
+      DB_NAME:      ${DB_NAME:-casino_db}
+      JWT_SECRET:   ${JWT_SECRET:-dev_secret_local}
+      CORS_ORIGIN:  "*"
+      PORT:         3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - casino-net
+
+  # ── Frontend Angular + Nginx ───────────────────────────────
+  frontend:
+    build: ../frontend_intro_devops_casino
+    container_name: casino-frontend
+    restart: unless-stopped
+    environment:
+      # Nginx reemplaza ${BACKEND_HOST} en default.conf.template
+      # En local apunta al nombre del servicio backend en la red Docker
+      BACKEND_HOST: backend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    networks:
+      - casino-net
+
+# ── Volumen nombrado para persistencia ─────────────────────────
+# Los datos de Postgres sobreviven a docker rm del contenedor
+# Para borrar los datos: docker compose down -v
+volumes:
+  pg_data:
+
+# ── Red interna ────────────────────────────────────────────────
+networks:
+  casino-net:
+    driver: bridge
