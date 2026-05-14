@@ -18,23 +18,12 @@ COPY src ./src
 # ETAPA 2 — runtime: imagen final limpia
 # La imagen final no tiene npm ni el toolchain de build
 # ──────────────────────────────────────────────────────────────
-FROM node:20-alpine AS runtime
+FROM nginxinc/nginx-unprivileged:1.27-alpine AS runtime
 
-WORKDIR /app
+COPY --from=builder --chown=nginx:nginx /app/dist/casino-frontend/browser/. /usr/share/nginx/html/
+COPY --chown=nginx:nginx default.conf.template /etc/nginx/templates/default.conf.template
 
-# Copiar solo lo necesario desde builder
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/src ./src
-COPY package.json ./
-
-# ── Usuario no root ───────────────────────────────────────────
-# node:20-alpine ya incluye el usuario 'node' (uid 1000)
-# Cambiar ownership antes de hacer USER
-RUN addgroup -S app && adduser -S app -G app
-RUN chown -R app:app /app
-USER app
-# Verificar: docker exec <contenedor> whoami  →  debe responder 'app'
-
-EXPOSE 3000
+USER nginx
+EXPOSE 8080
 
 CMD ["node", "src/server.js"]
