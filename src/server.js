@@ -42,6 +42,8 @@ app.get('/', (req, res) => {
   });
 });
 
+
+
 // Rutas de la API
 app.use('/api/auth',          require('./routes/auth'));
 app.use('/api/usuarios',      require('./routes/users'));
