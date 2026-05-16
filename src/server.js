@@ -52,6 +52,7 @@ app.use('/api/transacciones', require('./routes/transactions'));
 
 // Manejador global de errores (cuatro parámetros = Express lo identifica como error handler).
 // Captura errores síncronos y los que llegan por next(err) en las rutas.
+//git
 app.use((err, req, res, next) => {
   console.error('[ERR]', err);
   res.status(err.status || 500).json({ error: err.message || 'Error interno' });
