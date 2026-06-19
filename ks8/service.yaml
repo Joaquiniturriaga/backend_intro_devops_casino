@@ -1,0 +1,11 @@
+apiVersion: v1  #Significa que pertenece al grupo "core" de kubernetes pero eso es solo v1 sin prefijo app 
+kind: Service
+metadata: #Este nombre se convierte en DNS interno otros pods llamaran a :3000 
+  name: casino-backend #Esto es mas entendible al usar el mismo nombre
+spec:
+  type: ClusterIP #Expone el service a una ip interna, solo accesible dentro del cluster perfecto para el back
+  selector: #¿Como encuentra sus Pods? El service envia trafico a todos los Pods que tenga la etiqueta de abajo
+    app: casino-backend
+  ports:
+    - port: 3000 #Puerto que escucha el service
+      targetPort: 3000 #El puerto del contenedor al que reenvia el containerPort 

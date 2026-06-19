@@ -1,0 +1,41 @@
+apiVersion: apps/v1 #Indicamos el grupo y la version de API, estos viven en el grupo apps, version estable v1
+kind: Deployment #Tipo de objeto, le decimos al API server que controlador debe gestionarlo 
+metadata:  #
+  name: casino-backend #Nombre del deployment dentro de su namespace es lo que veremos en kubectl y usaremos el kubectl 
+spec:
+  replicas: 2 #Cuantas copias (Pods) identicas queremos vivas
+  selector: #Le decimos al Deployment que Pods son de el y son todos los que tengan la etiqueta casino-backend
+    matchLabels:
+      app: casino-backend
+  template: #Es el molde con el que se fabrica cada Pod, este tiene su propio metadata (labes que el selector bysca y su propio scpec) contenedores que corren dentro
+    metadata:
+      labels:
+        app: casino-backend
+    spec:
+      containers: 
+        - name: casino-backend #Nombre del contenedor dentro del Pod. es el que usamos en kubectl set image..
+          image: <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/casino-backend:latest #Imagen del docker que correra aqui apunta al ecr
+          ports: #Declara que el contenedor esta esuchando en el puerto 3000, ayuda a saber donde apuntar
+            - containerPort: 3000 # El destino al que el service enviara su trafico 
+          envFrom:
+            - secretRef: #En contra de credenciales en texto plano
+                name: casino-secrets
+          resources:
+            requests:
+              cpu: "100m" # 100 m como minimo 0.1% del nucleo 
+              memory: "128Mi" # 128 migebites algo asi era xdxd (como minimo)
+            limits:
+              cpu: "300m" #Como maximo
+              memory: "256Mi" #Como maximo
+          readinessProbe: #Verificamos si acepta trafico  si falla k8s lo saca del service y deja de enviarle peticiones
+            httpGet:
+              path: /readyz
+              port: 3000
+            initialDelaySeconds: 5 #Cuanto espera el kubo de vainilla para verificar si funcopna
+            periodSeconds: 5 #Queremos saber si acepta trafico por eso es mas rapido
+          livenessProbe: #Verificamos si el contenedor esta vivo si falla kubos de vainilla lo asesina y lo reinicia
+            httpGet:
+              path: /livez
+              port: 3000
+            initialDelaySeconds: 10 #Queremos saber si funciona por eso no esta "urgente"
+            periodSeconds: 10 #Cada cuanto segundos se repite
