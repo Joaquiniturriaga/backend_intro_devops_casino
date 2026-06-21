@@ -14,7 +14,7 @@ spec:
     spec:
       containers: 
         - name: casino-backend #Nombre del contenedor dentro del Pod. es el que usamos en kubectl set image..
-          image: <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/casino-backend:latest #Imagen del docker que correra aqui apunta al ecr
+          image: 883811547490.dkr.ecr.us-east-1.amazonaws.com/casino-backend:latest #Imagen del docker que correra aqui apunta al ecr
           ports: #Declara que el contenedor esta esuchando en el puerto 3000, ayuda a saber donde apuntar
             - containerPort: 3000 # El destino al que el service enviara su trafico 
           envFrom:
