@@ -33,6 +33,21 @@ app.get('/health', async (req, res) => {
   }
 });
 
+
+
+app.get('/livez', (req, res) => {
+  res.status(200).json({ status: 'alive' });
+});
+
+app.get('/readyz', async (req, res) => {
+  try {
+    await pool.query('SELECT 1');
+    res.status(200).json({ status: 'ready' });
+  } catch (err) {
+    res.status(503).json({ status: 'not ready', error: err.message });
+  }
+});
+  
 // Bienvenida
 app.get('/', (req, res) => {
   res.json({

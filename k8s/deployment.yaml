@@ -3,7 +3,7 @@ kind: Deployment #Tipo de objeto, le decimos al API server que controlador debe 
 metadata:  #
   name: casino-backend #Nombre del deployment dentro de su namespace es lo que veremos en kubectl y usaremos el kubectl 
 spec:
-  replicas: 2 #Cuantas copias (Pods) identicas queremos vivas
+  replicas: 1 #Cuantas copias (Pods) identicas queremos vivas
   selector: #Le decimos al Deployment que Pods son de el y son todos los que tengan la etiqueta casino-backend
     matchLabels:
       app: casino-backend
