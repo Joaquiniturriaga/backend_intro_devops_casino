@@ -1,206 +1,339 @@
-# casino-backend
+Bueno despues de 100 horas fulminando neuronas y tokens aqui el readme final
 
-Backend del **Casino Online** — Experiencia 2 de la asignatura
-**Introducción a Herramientas DevOps (ISY1101)**.
+En primer lugar te recomiendo leer este glosario para que puedas ir a la guerra y te seran utiles :)
 
-API REST en Node.js + Express con PostgreSQL como base de datos.
+1)Kubernetes:
 
-> **Este repositorio NO incluye `Dockerfile`, `docker-compose.yml`
-> ni workflows de GitHub Actions.** Esos artefactos forman parte del
-> entregable de la **Evaluación Parcial 2** y deben construirlos los
-> estudiantes (frontend + backend + base de datos contenerizados,
-> publicados en un registry y desplegados en EC2).
+1.1)Pod
 
----
+  La unidad mínima de ejecución en Kubernetes.
 
-## Stack
+  Pod
+  └─ Container (Docker)
 
-- Node.js 20 (recomendado correr sobre `node:20-alpine`)
-- Express 4
-- PostgreSQL 16 (recomendado `postgres:16-alpine` con volumen nombrado)
-- JWT para autenticación, bcryptjs para hashes
-- `pg` como cliente de Postgres
+  Ejemplo:
 
----
+  kubectl get pods
 
-## Estructura
 
-```
-casino-backend/
-├── src/
-│   ├── server.js                ← bootstrap Express + rutas
-│   ├── db/
-│   │   ├── pool.js              ← Pool de pg + esperarBD()
-│   │   └── seed.js              ← usuarios demo (idempotente)
-│   ├── middleware/
-│   │   └── auth.js              ← JWT firmar / requiereAuth
-│   ├── routes/
-│   │   ├── auth.js              ← /api/auth/login | register
-│   │   ├── users.js             ← /api/usuarios/me, depositar
-│   │   ├── games.js             ← /api/juegos/{slots,roulette,blackjack}
-│   │   └── transactions.js      ← /api/transacciones (historial)
-│   └── games/
-│       ├── slots.js
-│       ├── roulette.js
-│       └── blackjack.js
-├── db/
-│   └── init.sql                 ← esquema (lo monta Postgres en /docker-entrypoint-initdb.d)
-├── package.json
-├── .gitignore
-└── .env.example
-```
+1.2)Deployment
 
----
+  Define cuántos pods deben existir.
 
-## Variables de entorno
+  replicas: 3
 
-| Variable        | Default       | Descripción                                   |
-|-----------------|---------------|-----------------------------------------------|
-| `PORT`          | `3000`        | Puerto HTTP del servidor                      |
-| `JWT_SECRET`    | `cambiame`    | Secreto de firma JWT (cambiar en producción)  |
-| `JWT_EXPIRES_IN`| `8h`          | Vigencia del token                            |
-| `DB_HOST`       | `localhost`   | Host de Postgres (`db` en docker-compose)     |
-| `DB_PORT`       | `5432`        | Puerto Postgres                               |
-| `DB_USER`       | `casino`      | Usuario Postgres                              |
-| `DB_PASSWORD`   | `casino`      | Password Postgres                             |
-| `DB_NAME`       | `casino_db`   | Base de datos                                 |
-| `CORS_ORIGIN`   | `*`           | Lista CSV de orígenes permitidos              |
+  Si un pod muere:
 
----
+  Deployment
+  ↓
+  ReplicaSet
+  ↓
+  Nuevo Pod
 
-## Endpoints
+1.3)Service:
 
-### Autenticación
+  Permite que otros pods encuentren una aplicación.
 
-| Método | Ruta                  | Descripción                              |
-|--------|-----------------------|------------------------------------------|
-| POST   | `/api/auth/register`  | Registro `{ username, email, password }` |
-| POST   | `/api/auth/login`     | Login `{ username, password }`           |
+  Frontend
+  ↓
+  Service
+  ↓
+  Backend
 
-### Usuario autenticado (header `Authorization: Bearer <token>`)
+  Sin importar si el pod cambia de IP.
 
-| Método | Ruta                                  | Descripción                       |
-|--------|---------------------------------------|-----------------------------------|
-| GET    | `/api/usuarios/me`                    | Datos del usuario y saldo         |
-| POST   | `/api/usuarios/me/depositar`          | `{ monto }` — recarga saldo demo  |
-| GET    | `/api/transacciones?limit=50`         | Historial del usuario             |
 
-### Juegos
+1.5)Namespace
 
-| Método | Ruta                              | Descripción                                                    |
-|--------|-----------------------------------|----------------------------------------------------------------|
-| GET    | `/api/juegos`                     | Catálogo (slots, roulette, blackjack)                          |
-| POST   | `/api/juegos/slots/jugar`         | `{ apuesta }` → `{ resultado, saldo }`                         |
-| POST   | `/api/juegos/roulette/jugar`      | `{ apuestas:[{tipo,valor,monto}] }` → `{ resultado, saldo }`  |
-| POST   | `/api/juegos/blackjack/iniciar`   | `{ apuesta }` → `{ sesionId, jugador, banca, ... }`            |
-| POST   | `/api/juegos/blackjack/accion`    | `{ sesionId, accion: pedir/plantarse/doblar }`                 |
+  Carpeta lógica dentro del cluster.
 
-### Salud
+  Ejemplo:
 
-| Método | Ruta       | Descripción                  |
-|--------|------------|------------------------------|
-| GET    | `/health`  | Estado del servidor + BD     |
-| GET    | `/`        | Mensaje de bienvenida        |
+  kube-system
+  default
+  monitoring
 
----
+1.6)Estados importantes
 
-## Usuarios demo (sembrados al arrancar)
+  Running
 
-| username   | password    | rol      | saldo inicial |
-|------------|-------------|----------|---------------|
-| `demo`     | `demo1234`  | jugador  | $5.000        |
-| `jugador1` | `demo1234`  | jugador  | $1.000        |
-| `admin`    | `admin1234` | admin    | $99.999       |
+  Todo bien.
 
----
+  1/1 Running
+  Pending
 
-## Cómo correr en local (sin Docker)
+  Kubernetes quiere crear el pod pero no encuentra dónde.
 
-Requisitos: Node 20 y un Postgres accesible.
+  Causas típicas:
 
-```bash
-cp .env.example .env          # ajustar credenciales
-npm install                   # genera node_modules (y package-lock.json local, no se commitea)
-npm start
-# API disponible en http://localhost:3000
-```
+  Falta CPU
+  Falta RAM
+  PVC no disponible
+  Node affinity
+  ContainerCreating
 
----
+  Está construyendo el pod.
 
-## Conceptos DevOps clave del código
+  A veces significa:
 
-Los siguientes puntos son relevantes para la contenerización y despliegue en EC2.
-Busca los comentarios en el código fuente para mayor detalle.
+  Esperando volumen EBS
+  CrashLoopBackOff
 
-### 1. Configuración por variables de entorno (12-factor App)
-Toda la configuración sensible o que cambia entre ambientes (host de la BD,
-contraseña, JWT_SECRET, puerto) viene de variables de entorno, nunca
-hardcodeada. En Docker se inyectan con `-e`, en `docker-compose.yml` con la
-sección `environment:`, y en EC2 se pueden usar secretos de AWS.
+  Tu aplicación arranca y se cae continuamente.
 
-### 2. Endpoint `/health` y Docker HEALTHCHECK
-`GET /health` consulta la BD y responde `{ status: "ok" }` o `503`.
-Docker lo usa en el `HEALTHCHECK` del `Dockerfile`; los Load Balancers de AWS
-lo usan para enrutar tráfico solo hacia instancias/contenedores sanos.
-Deben configurar este endpoint como HEALTHCHECK en el Dockerfile del backend
-y como health check en el servicio de docker-compose.
+  Inicia
+  ↓
+  Crash
+  ↓
+  Reintenta
+  ↓
+  Crash
+  ↓
+  Reintenta
 
-### 3. Binding a `0.0.0.0`
-El servidor escucha en `0.0.0.0` (todas las interfaces), no en `localhost`.
-Dentro de un contenedor, `localhost` solo aceptaría conexiones originadas
-dentro del mismo contenedor; `0.0.0.0` permite que el host (EC2) y otros
-contenedores puedan acceder.
+  Ejemplo:
 
-### 4. Reintentos de conexión a la BD (`esperarBD`)
-Cuando `docker-compose up` levanta varios servicios a la vez, el backend
-puede arrancar antes de que Postgres esté listo. `esperarBD()` reintenta
-hasta 30 veces con 2 s de espera. La solución definitiva es combinar esto
-con `depends_on: condition: service_healthy` y un `healthcheck` en el
-servicio `db` usando `pg_isready`.
+  kubectl logs pod-x
 
-### 5. Inicialización del esquema (`db/init.sql`)
-Postgres ejecuta los archivos `.sql` en `/docker-entrypoint-initdb.d/`
-**solo si el volumen está vacío** (primer arranque). En reinicios
-posteriores el script no se vuelve a ejecutar. Por eso todas las
-sentencias DDL usan `IF NOT EXISTS`. Deben montar este archivo en el
-contenedor de la BD usando la sección `volumes:` del docker-compose.yml.
+  para ver el motivo.
 
-### 6. Seed idempotente
-`seed.js` inserta usuarios demo al arrancar el backend usando
-`ON CONFLICT DO NOTHING`, por lo que es seguro ejecutarlo en cada
-reinicio del contenedor sin riesgo de duplicar datos ni fallar.
+Storage
+PVC
 
-### 7. Pool de conexiones
-`pg.Pool` mantiene hasta 10 conexiones abiertas simultáneamente.
-En producción este valor debe ajustarse según la instancia RDS/Postgres
-y la cantidad de réplicas del contenedor.
+Persistent Volume Claim.
 
----
+El pod pide almacenamiento.
 
-## Cómo lo van a contenerizar (EP2)
+Pod
+ ↓
+PVC
+ ↓
+PV
+ ↓
+EBS
+PV
 
-El docente espera que ustedes:
+Persistent Volume.
 
-1. Construyan un **Dockerfile multi-stage** (`builder` con `npm install`,
-   `runtime` `node:20-alpine` con usuario no root).
-2. Definan en el `docker-compose.yml` los servicios `db`, `backend`
-   (y agreguen el `frontend`) con:
-   - `pg_data` como **named volume** para `/var/lib/postgresql/data`.
-   - `./casino-backend/db/init.sql` montado en `/docker-entrypoint-initdb.d/`
-     (recuerden: solo se ejecuta si el volumen está vacío).
-   - `depends_on` con `condition: service_healthy` y un `healthcheck`
-     en `db` (`pg_isready`).
-   - Variables de entorno **inyectadas por compose**, sin hard-codear.
-3. Configuren workflows en `.github/workflows/` que hagan
-   `build → push (ECR) → deploy` en EC2 al hacer push a la rama
-   correspondiente (en el **Ejercicio 2.5** se usa `main`; en la
-   **EP2** la pauta oficial pide la rama `deploy`).
+El volumen real que usa Kubernetes.
 
-Lean la pauta oficial (`EP2_Instrucciones y Pauta_Encargo_Estudiante.pdf`)
-para los criterios completos.
+EBS
 
----
+Elastic Block Store.
 
-## Repositorio del frontend
+Disco duro persistente de AWS.
 
-[`casino-frontend`](../casino-frontend)
+Si matas el pod:
+
+Datos sobreviven
+
+porque siguen en el EBS.
+
+CSI
+CSI
+
+Container Storage Interface.
+
+Driver que conecta Kubernetes con discos.
+
+En tu caso:
+
+Kubernetes
+ ↓
+EBS CSI Driver
+ ↓
+AWS EBS
+
+Sin CSI:
+
+No se montan volúmenes
+EBS CSI Driver
+
+Controlador que crea y adjunta discos EBS automáticamente.
+
+Cuando falla:
+
+Postgres
+ ↓
+ContainerCreating
+
+porque no puede montar el disco.
+
+AWS
+EC2
+
+Máquina virtual.
+
+Tus nodos EKS son EC2.
+
+Node 1
+Node 2
+EKS
+
+Elastic Kubernetes Service.
+
+Servicio administrado de Kubernetes en AWS.
+
+IAM Role
+
+Permisos AWS.
+
+Ejemplo:
+
+Leer S3
+Crear EBS
+Leer Secrets
+IMDS
+
+Instance Metadata Service.
+
+Servicio interno de EC2.
+
+Dirección:
+
+169.254.169.254
+
+Entrega:
+
+Región
+Instance ID
+IAM Credentials
+IMDSv2
+
+Versión segura de IMDS.
+
+Usa tokens.
+
+AWS recomienda:
+
+IMDSv2 Required
+Hop Limit
+
+Cantidad de saltos permitidos.
+
+Pod
+ ↓
+Nodo
+ ↓
+IMDS
+
+Si:
+
+Hop Limit = 1
+
+muchos pods no llegan.
+
+Si:
+
+Hop Limit = 2
+
+funciona.
+
+Escalamiento
+HPA
+
+Horizontal Pod Autoscaler.
+
+Aumenta o disminuye pods automáticamente.
+
+Ejemplo:
+
+minReplicas: 2
+maxReplicas: 6
+Metrics Server
+
+Recoge métricas.
+
+Sin él:
+
+HPA <unknown>
+CPU Requests
+
+CPU mínima garantizada.
+
+Ejemplo:
+
+requests:
+  cpu: 100m
+
+HPA usa esto para calcular porcentajes.
+
+Redes
+LoadBalancer
+
+Expone una aplicación a Internet.
+
+Internet
+ ↓
+LoadBalancer
+ ↓
+Frontend
+ClusterIP
+
+Service interno.
+
+Solo accesible dentro del cluster.
+
+AWS Academy
+Credentials Expired
+
+Tu enemigo número 1.
+
+aws sts get-caller-identity
+
+Si falla:
+
+Actualizar credenciales
+Node Group
+
+Grupo de nodos EC2.
+
+Ejemplo:
+
+2 x t3.small
+
+Cuando lo apagas:
+
+desiredSize = 0
+
+Cuando lo enciendes:
+
+desiredSize = 2
+Conceptos que impresionan en una defensa
+Node Affinity
+
+Obliga un pod a ejecutarse en ciertos nodos.
+
+Availability Zone (AZ)
+
+Datacenter físico.
+
+Ejemplo:
+
+us-east-1a
+us-east-1b
+Auto Healing
+
+Capacidad de Kubernetes de recuperarse solo.
+
+Ejemplo:
+
+kubectl delete pod frontend-123
+
+Kubernetes:
+
+Pod eliminado
+↓
+Deployment detecta falta
+↓
+Crea uno nuevo
+Rollout
+
+Despliegue de nueva versión.
+
+kubectl rollout restart deployment frontend
+Rollback
+
+Volver a la versión anterior.
+
+kubectl rollout undo deployment frontend
