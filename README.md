@@ -337,3 +337,9 @@ Rollback
 Volver a la versión anterior.
 
 kubectl rollout undo deployment frontend
+
+
+
+
+ver usuario root 
+docker run --rm -it apuestas-service id

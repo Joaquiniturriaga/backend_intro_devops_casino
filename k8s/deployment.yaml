@@ -4,6 +4,11 @@ metadata:  #
   name: casino-backend #Nombre del deployment dentro de su namespace es lo que veremos en kubectl y usaremos el kubectl 
 spec:
   replicas: 1 #Cuantas copias (Pods) identicas queremos vivas
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1 
   selector: #Le decimos al Deployment que Pods son de el y son todos los que tengan la etiqueta casino-backend
     matchLabels:
       app: casino-backend
