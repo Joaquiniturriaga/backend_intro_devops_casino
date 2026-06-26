@@ -3,11 +3,7 @@ package-lock.json
 .env
 *.log
 coverage
-<<<<<<< HEAD
-=======
 .DS_Store
->>>>>>> upstream/main
-
 # Claude Code
 .claude/
 CLAUDE.md
