@@ -201,8 +201,3 @@ Lean la pauta oficial (`EP2_Instrucciones y Pauta_Encargo_Estudiante.pdf`)
 para los criterios completos.
 
 ---
-
-## Repositorio del frontend
-
-[`casino-frontend`](../casino-frontend)
->>>>>>> upstream/main
