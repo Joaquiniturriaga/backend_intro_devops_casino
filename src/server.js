@@ -5,7 +5,6 @@ const express = require('express');
 const cors = require('cors');
 const { pool, esperarBD } = require('./db/pool');
 const { sembrarUsuariosDemo } = require('./db/seed');
-//Holaa
 
 const app = express();
 
@@ -33,21 +32,25 @@ app.get('/health', async (req, res) => {
   }
 });
 
-
-
+// ── Sondas de salud para Kubernetes (referencia para los microservicios) ────
+// Distinción clave entre las dos probes:
+//   • liveness  → ¿el proceso está vivo? NO depende de la BD. Si falla, k8s
+//                 REINICIA el pod.
+//   • readiness → ¿listo para recibir tráfico? Verifica la BD. Si falla, k8s
+//                 SACA el pod del balanceo (sin reiniciarlo) hasta que sane.
 app.get('/livez', (req, res) => {
-  res.status(200).json({ status: 'alive' });
+  res.json({ status: 'alive', uptime: process.uptime() });
 });
 
 app.get('/readyz', async (req, res) => {
   try {
     await pool.query('SELECT 1');
-    res.status(200).json({ status: 'ready' });
+    res.json({ status: 'ready', db: 'up' });
   } catch (err) {
-    res.status(503).json({ status: 'not ready', error: err.message });
+    res.status(503).json({ status: 'not-ready', db: 'down', error: err.message });
   }
 });
-  
+
 // Bienvenida
 app.get('/', (req, res) => {
   res.json({
@@ -57,8 +60,6 @@ app.get('/', (req, res) => {
   });
 });
 
-
-//
 // Rutas de la API
 app.use('/api/auth',          require('./routes/auth'));
 app.use('/api/usuarios',      require('./routes/users'));
@@ -67,7 +68,6 @@ app.use('/api/transacciones', require('./routes/transactions'));
 
 // Manejador global de errores (cuatro parámetros = Express lo identifica como error handler).
 // Captura errores síncronos y los que llegan por next(err) en las rutas.
-//git
 app.use((err, req, res, next) => {
   console.error('[ERR]', err);
   res.status(err.status || 500).json({ error: err.message || 'Error interno' });
