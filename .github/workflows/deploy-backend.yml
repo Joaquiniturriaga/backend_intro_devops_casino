@@ -1,22 +1,30 @@
 name: Build and Deploy - casino-backend
-
 on:
   push:
     branches: [deploy]
-
 env:
   AWS_REGION: us-east-1
   ECR_REPOSITORY: casino-backend
   EKS_CLUSTER: vidalcasino-eks
   DEPLOYMENT_NAME: casino-backend
-  CONTAINER_NAME: casino-backend   
-
+  CONTAINER_NAME: casino-backend
 jobs:
-  build-and-deploy:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: npm ci
+      - name: Run unit tests
+        run: npm test
+  build-and-deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -24,11 +32,9 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
-
       - name: Login to Amazon ECR
         id: ecr-login
         uses: aws-actions/amazon-ecr-login@v2
-
       - name: Build, tag and push image
         env:
           ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
@@ -41,10 +47,8 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:v1.0.$GITHUB_RUN_NUMBER
-
       - name: Update kubeconfig
         run: aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER }} --region ${{ env.AWS_REGION }}
-
       - name: Deploy to EKS
         env:
           ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
